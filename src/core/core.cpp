@@ -4,6 +4,7 @@
 #include "hw/buffer.sdram.h"
 #include "mode.h"
 #include "expose.h"
+#include "engine/audrey2/sdram_alloc.h"
 
 using namespace spotykach;
 using namespace daisysp;
@@ -12,6 +13,8 @@ Core::Core():
 _driver { Driver(_decks[Deck::A], _decks[Deck::B], _click, _panner, _mod.data()) }
 {
     _source.fill(Deck::Source::external);
+    _deck_engines.fill(nullptr);
+    _engines.fill(DeckEngineConfig {});
     _bus.fill(0);
     _xfade.SetStage(.5f);
 };
@@ -55,6 +58,8 @@ void Core::init(const float sample_rate, const float callback_buffer_size) {
         p.slice_buf = slice_buf[d];
         p.track_buf = track_buf[d];
         deck(ref).init(p);
+        _deck_engines[ref] = infrasonic::SDRAM::allocate<DeckEngine>();
+        _deck_engines[ref]->init(sample_rate);
         
         _mod[ref].init(sample_rate);
     }  
@@ -92,7 +97,11 @@ void Core::infer_panner_mode()
 
 void Core::prepare() 
 {
-    for (auto& d: _decks) d.prepare();
+    for (auto ref: { Deck::A, Deck::B }) {
+        _decks[ref].prepare();
+        _deck_engines[ref]->set_controls(_engine_controls[ref]);
+        _deck_engines[ref]->prepare(_engines[ref].type);
+    }
 }
 
 void Core::process(const float* const* in, float** out, size_t size) 
@@ -116,17 +125,42 @@ void Core::process(const float* const* in, float** out, size_t size)
             in_b[0] = in_b[1] = in[1][i];
         }
 
-        deck_a.process_out(in_a[0], in_a[1], out_a[0], out_a[1]);
-        deck_b.process_out(in_b[0], in_b[1], out_b[0], out_b[1]);
-
-        switch (_source[Deck::A]) {
-            case Deck::Source::internal: deck_a.process_in(out_b[0], out_b[1]); break;
-            case Deck::Source::external: deck_a.process_in(in_a[0], in_a[1]); break;
+        if (_engines[Deck::A].type == EngineType::Tape) {
+            deck_a.process_out(in_a[0], in_a[1], out_a[0], out_a[1]);
         }
-        
-        switch (_source[Deck::B]) {
-            case Deck::Source::internal: deck_b.process_in(out_a[0], out_a[1]); break;
-            case Deck::Source::external: deck_b.process_in(in_b[0], in_b[1]); break;
+        else {
+            _deck_engines[Deck::A]->process(_engines[Deck::A].type, _engines[Deck::A].fx_only, in_a[0], in_a[1], out_a[0], out_a[1]);
+            deck_a.fx().process(out_a[0], out_a[1]);
+        }
+
+        if (_engines[Deck::B].through) {
+            in_b[0] = out_a[0];
+            in_b[1] = out_a[1];
+        }
+
+        if (_engines[Deck::B].type == EngineType::Tape) {
+            deck_b.process_out(in_b[0], in_b[1], out_b[0], out_b[1]);
+        }
+        else {
+            _deck_engines[Deck::B]->process(_engines[Deck::B].type, _engines[Deck::B].fx_only, in_b[0], in_b[1], out_b[0], out_b[1]);
+            deck_b.fx().process(out_b[0], out_b[1]);
+        }
+
+        if (_engines[Deck::A].type == EngineType::Tape) {
+            switch (_source[Deck::A]) {
+                case Deck::Source::internal: deck_a.process_in(out_b[0], out_b[1]); break;
+                case Deck::Source::external: deck_a.process_in(in_a[0], in_a[1]); break;
+            }
+        }
+
+        if (_engines[Deck::B].type == EngineType::Tape) {
+            if (_engines[Deck::B].through) deck_b.process_in(out_a[0], out_a[1]);
+            else {
+                switch (_source[Deck::B]) {
+                    case Deck::Source::internal: deck_b.process_in(out_a[0], out_a[1]); break;
+                    case Deck::Source::external: deck_b.process_in(in_b[0], in_b[1]); break;
+                }
+            }
         }
 
         _mod[Deck::A].follow(out_a[0]);

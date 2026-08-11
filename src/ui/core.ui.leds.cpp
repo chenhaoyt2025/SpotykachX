@@ -8,6 +8,7 @@ using namespace daisysp;
 
 static constexpr uint32_t kWhite    = 0xffffff;
 static constexpr uint32_t kPink     = 0xff00ff;
+static constexpr uint32_t kYellow    = 0xffde21;
 static constexpr uint32_t kRed      = 0xff0000;
 static constexpr uint32_t kBlue     = 0x0000ff;
 static constexpr uint32_t kGreen    = 0x00ff00;
@@ -18,6 +19,22 @@ static constexpr uint32_t kDriftColor    = 0xc850ff;
 static constexpr uint32_t kDelayColor    = 0xFF6565;
 static constexpr uint32_t kSoftFxColor   = 0xFFD524;
 static constexpr uint32_t kHarshFxColor  = 0xFF9A24;
+static constexpr uint32_t kPlaitsColor   = 0x00B4D8;
+static constexpr uint32_t kRingsColor    = 0xFFFFFF;
+static constexpr uint32_t kElementsColor = 0xC850FF;
+static constexpr uint32_t kBenjolinColor = 0xB6FF00;
+static constexpr uint32_t kMicrocosmColor = kPink;
+static constexpr std::array<uint32_t, static_cast<size_t>(EngineType::Count)> kEngineColor = {
+    kReelColor,
+    kGreen,
+    kYellow,
+    kBlue,
+    kMicrocosmColor,
+    kPlaitsColor,
+    kRingsColor,
+    kElementsColor,
+    kBenjolinColor
+};
 
 static constexpr std::array<uint32_t, kStorageTapeCount> kTapeColor = {
     // Lexicographically ordered colors, 
@@ -428,6 +445,12 @@ void CoreUI::_draw_ring(const Deck::Ref ref)
             ring.add_point(wh, .9f, true, false);
         }
     }
+
+    if (_engine_feedback[ref] && !_value_display_timeout.is_passed()) {
+        _show_engine_state(ref);
+        ring.set_updated();
+        return;
+    }
     
     switch (ref) {
         case Deck::A: {
@@ -565,6 +588,38 @@ void CoreUI::_show_error(const Deck::Ref ref)
         _ring[ref].set_hex_color(kRed);
         _ring[ref].set_brightness(.6f);
         _ring[ref].set_segment(0.f, 0.98f);
+    }
+}
+void CoreUI::_show_engine_state(const Deck::Ref ref)
+{
+    auto& ring = _ring[ref];
+    auto cfg = _core.engine(ref);
+    auto engine_idx = static_cast<uint8_t>(cfg.type);
+    auto point_count = engine_idx + 1;
+
+    ring.clear();
+    ring.set_hex_color(kEngineColor[engine_idx]);
+    ring.set_brightness(.65f);
+    ring.set_segment(0.f, 0.999f);
+    ring.fill_brightness(0.1f);
+
+    auto idx = 3;
+    for(uint8_t i = 0; i < point_count; i++)
+    {
+        ring.set_point_hex_color(kEngineColor[engine_idx]);
+        ring.set_point(idx, 0.85f);
+        idx += 6;
+    }
+
+    if(cfg.fx_only)
+    {
+        ring.set_point_hex_color(kRed);
+        ring.set_point(31, 1.f);
+    }
+    if(cfg.through)
+    {
+        ring.set_point_hex_color(kBlue);
+        ring.set_point(30, 1.f);
     }
 }
 

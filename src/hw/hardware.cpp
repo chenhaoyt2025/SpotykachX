@@ -183,13 +183,11 @@ void Hardware::Init(float sr, size_t blocksize)
     midi_uart.Init(midi_uart_cfg);
     midi_uart.StartReceive();
 
-    #ifndef DEBUG
     // --- USB MIDI ---
     MidiUsbHandler::Config midi_usb_cfg;
     midi_usb_cfg.transport_config.periph = MidiUsbTransport::Config::Periph::EXTERNAL;
     midi_usb.Init(midi_usb_cfg);
     midi_usb.StartReceive();
-    #endif
 
     // -- DAC --
     DacHandle::Config config;

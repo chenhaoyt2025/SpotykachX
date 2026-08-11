@@ -28,20 +28,16 @@ bool CoreMIDI::process()
         has_clock = _process_event(event) || has_clock;
     }
 
-    #ifndef DEBUG
     _hw.midi_usb.Listen();
     while(_hw.midi_usb.HasEvents()) {
         auto event = _hw.midi_usb.PopEvent();
         has_clock = _process_event(event) || has_clock;
     }
-    #endif
 
     // Modified libDaisy MIDI handlers require explicit call to transmit
     // enqueued messages instead of blocking every time a message is sent
     _hw.midi_uart.TransmitEnqueuedMessages();
-    #ifndef DEBUG
     _hw.midi_usb.TransmitEnqueuedMessages();
-    #endif
     
     return has_clock;
 }

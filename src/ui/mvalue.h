@@ -26,6 +26,10 @@ float value() {
   return _value; 
 }
 
+float current() const {
+  return _value;
+}
+
 void set(const float value) {
   _is_tracking = false;
   _is_active = false;

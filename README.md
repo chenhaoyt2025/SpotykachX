@@ -1,5 +1,8 @@
-# Spotykach
-The official firmware for the [Spotykach](https://synthux.academy/store/spotykach).
+# SpotykachX
+SpotykachX is a new project forked from `Spotykach_clean_165_ring`.
+
+The hardware mappings now match the official Spotykach hardware. The project
+keeps the SpotykachX dual-deck engine expansion and MIDI features.
 
 ## Setup
 
@@ -29,8 +32,8 @@ If successful the compiled binaries will end up in the `build/` directory along 
 intermediate build files:
 
 ```
-spotykach.bin
-spotykach.elf
+spotykachx.bin
+spotykachx.elf
 ```
 
 The `.elf` file is mainly used for debugging. The `.bin` file is the one that the DFU

@@ -2,7 +2,7 @@
 #include "app.h"
 
 const char* USBD_MANUFACTURER_STRING = "Synthux";
-const char* USBD_PRODUCT_STRING_HS = "Spotykach";
+const char* USBD_PRODUCT_STRING_HS = "SpotykachX";
 
 static spotykach::Application app;
 

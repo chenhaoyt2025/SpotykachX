@@ -72,7 +72,13 @@ public:
     
     float tempo() { return _clock.Tempo(); }
     void set_tempo_norm(const float value) { _tempo.set_norm(value); }
-    void tap_tempo() { _tempo.tap(); }
+    float tap_tempo() {
+        _tempo.tap();
+        if(!is_external_sync()) {
+            _clock.SetTempo(_tempo.bpm());
+        }
+        return _tempo.bpm();
+    }
 
     Source source() const { return _source; }
     void toggle_source();

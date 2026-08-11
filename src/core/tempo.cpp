@@ -7,6 +7,7 @@ using namespace daisy;
 
 Tempo::Tempo():
 _prev_time  { 0 },
+_avg        { 500.f },
 _bpm        { 120.f },
 _pointer    { 0 },
 _full       { false }

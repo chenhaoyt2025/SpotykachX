@@ -164,6 +164,24 @@ void CoreUI::process()
         _draw_fx(ref);
         _draw_alt(ref);    
         _draw_play(ref, blink);
+
+        EngineControls engine_controls;
+        engine_controls.sos = _mix[ref].current();
+        engine_controls.mix = _mix[ref].current();
+        engine_controls.mod_freq = _mod_speed[ref].current();
+        engine_controls.mod_amt = _mod_amp[ref].current();
+        engine_controls.size = _size[ref].current();
+        engine_controls.pitch = _speed[ref].current();
+        engine_controls.pos = _pos[ref].current();
+        engine_controls.env = _env[ref].current();
+        engine_controls.flux_mix = _flux_mix[ref].current();
+        engine_controls.flux_intensity = _flux_intens[ref].current();
+        engine_controls.grit_mix = _grit_mix[ref].current();
+        engine_controls.grit_intensity = _grit_intens[ref].current();
+        engine_controls.feedback = _feedback[ref].current();
+        engine_controls.mode = deck.mode();
+        engine_controls.reverse = deck.is_reverse();
+        _core.set_engine_controls(ref, engine_controls);
     }
     if (_tempo.apply()) _core.driver().set_tempo_norm(_tempo.value());
     if (_pan_speed.apply()) _core.panner().set_speed(_pan_speed.value());
@@ -558,8 +576,8 @@ void CoreUI::_process_switches()
         else {
             auto& d = _core.driver();
             if (!d.is_external_sync()) {
-                d.tap_tempo();
-                _tempo.set(Tempo::abs_to_norm(d.tempo()));
+                const auto tapped_bpm = d.tap_tempo();
+                _tempo.set(Tempo::abs_to_norm(tapped_bpm));
             }
             if (!_tap_hold.is_holding()) {
                 _tap_hold.begin();
@@ -643,6 +661,48 @@ void CoreUI::_toggle_record(const Deck::Ref ref, const bool internal)
     _core.set_source(src, ref);
     deck.toggle_recording();
     _storage.of(ref).reset_recent_slot();
+}
+void CoreUI::_cycle_engine(const Deck::Ref ref)
+{
+    auto next = static_cast<uint8_t>(_core.engine_type(ref));
+    next = (next + 1) % static_cast<uint8_t>(EngineType::Count);
+
+    _core.set_engine_type(ref, static_cast<EngineType>(next));
+
+    auto& data = _settings.engine_data();
+    data.type[ref] = next;
+    _settings.write_engine();
+
+    _engine_feedback[ref] = true;
+    _value_display_timeout.start();
+}
+void CoreUI::_toggle_engine_fx_only(const Deck::Ref ref)
+{
+    auto cfg = _core.engine(ref);
+    cfg.fx_only = !cfg.fx_only;
+
+    _core.set_fx_only(ref, cfg.fx_only);
+
+    auto& data = _settings.engine_data();
+    data.fx_only[ref] = cfg.fx_only;
+    _settings.write_engine();
+
+    _engine_feedback[ref] = true;
+    _value_display_timeout.start();
+}
+void CoreUI::_toggle_engine_through(const Deck::Ref ref)
+{
+    auto cfg = _core.engine(ref);
+    cfg.through = !cfg.through;
+
+    _core.set_through(ref, cfg.through);
+
+    auto& data = _settings.engine_data();
+    data.through[ref] = cfg.through;
+    _settings.write_engine();
+
+    _engine_feedback[ref] = true;
+    _value_display_timeout.start();
 }
 void CoreUI::_trigger(const Deck::Ref ref, const float speed, const bool discont) 
 {

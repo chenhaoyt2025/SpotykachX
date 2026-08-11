@@ -8,7 +8,7 @@ endif
 USE_FATFS = 1
 
 # Project Name
-TARGET = spotykach
+TARGET = spotykachx
 
 CPP_STANDARD = -std=c++17
 
@@ -29,9 +29,12 @@ CPP_SOURCES = \
 	main.cpp \
 	app.cpp \
 	$(wildcard src/core/*.cpp) \
+	$(wildcard src/engine/*.cpp) \
+	$(wildcard src/engine/audrey2/*.cpp) \
 	$(wildcard src/hw/*.cpp) \
 	$(wildcard src/ui/*.cpp) \
-	$(wildcard src/memory/*.cpp)
+	$(wildcard src/memory/*.cpp) \
+	$(DAISYSP_DIR)/DaisySP-LGPL/Source/Effects/reverbsc.cpp
 
 # Core location, and generic Makefile.
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core

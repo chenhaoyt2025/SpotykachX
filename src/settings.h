@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cstring>
+
 #include "hw/hardware.h"
+#include "core/engine.h"
 #include "nocopy.h"
 
 namespace spotykach {
@@ -8,6 +11,7 @@ namespace spotykach {
 class Settings {
 public:
     static constexpr uint8_t kDataVersion = 5;
+    static constexpr size_t kEngineDeckCount = 2;
 
     Settings() = default;
     ~Settings() = default;
@@ -24,8 +28,31 @@ public:
         bool operator != (const Data& other) const { return true; }
     };
 
+    struct EngineData {
+        EngineData()
+        {
+            type[0] = static_cast<uint8_t>(EngineType::Tape);
+            type[1] = static_cast<uint8_t>(EngineType::Tape);
+            fx_only[0] = false;
+            fx_only[1] = false;
+            through[0] = false;
+            through[1] = false;
+        }
+        ~EngineData() = default;
+
+        uint8_t type[kEngineDeckCount];
+        bool fx_only[kEngineDeckCount];
+        bool through[kEngineDeckCount];
+
+        bool operator != (const EngineData& other) const
+        {
+            return std::memcmp(this, &other, sizeof(EngineData)) != 0;
+        }
+    };
+
     void init(Hardware& hw) {
         _storage.Init(hw.seed.qspi, _data, storage_version);
+        _engine_storage.Init(hw.seed.qspi, _engine_data, engine_storage_offset);
     }
 
     inline bool is_user_defined() 
@@ -40,6 +67,7 @@ public:
     void read() 
     {
         _data = _storage.GetSettings();
+        _engine_data = _engine_storage.GetSettings();
     }
 
     bool write() 
@@ -49,14 +77,31 @@ public:
         return is_user_defined();
     }
 
+    bool write_engine()
+    {
+        _engine_storage.Save(_engine_data);
+        _engine_data = _engine_storage.GetSettings();
+        return static_cast<int>(_engine_storage.GetState()) == 2;
+    }
+
+    inline EngineData& engine_data()
+    {
+        return _engine_data;
+    }
+
 
 private:
     NOCOPY(Settings)
 
     static constexpr char slug[4] = "cal";
+    static constexpr char engine_slug[4] = "eng";
     static constexpr uint8_t storage_version = 1;
+    static constexpr uint8_t engine_storage_version = 2;
+    static constexpr uint32_t engine_storage_offset = 0x100;
     daisy::PersistentStorage<Data, slug, storage_version> _storage;
+    daisy::PersistentStorage<EngineData, engine_slug, engine_storage_version> _engine_storage;
     Data _data;
+    EngineData _engine_data;
 };
 
 };

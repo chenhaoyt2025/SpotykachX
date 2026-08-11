@@ -80,6 +80,9 @@ private:
 
     void _toggle_play(const Deck::Ref, const bool reverse);
     void _toggle_record(const Deck::Ref, const bool internal);
+    void _cycle_engine(const Deck::Ref);
+    void _toggle_engine_fx_only(const Deck::Ref);
+    void _toggle_engine_through(const Deck::Ref);
     void _trigger(const Deck::Ref, const float speed, const bool discont = false);
     void _on_midi_note_on(const Deck::Ref, const uint8_t num);
     void _on_midi_cc(const Deck::Ref, const CC, const float);
@@ -98,6 +101,7 @@ private:
     void _show_key_intervals();
     void _show_size_quarters(const Deck::Ref, const uint32_t color);
     void _show_start_offset_interval(const Deck::Ref, const uint32_t color);
+    void _show_engine_state(const Deck::Ref);
     void _show_error(const Deck::Ref);
     
     void _show_empty(const Deck::Ref);
@@ -226,6 +230,7 @@ private:
     enum Touched: uint8_t {
         Shift,
         Alt,
+        SpotPad,
         FluxA,
         GritA,
         FluxB,
@@ -240,6 +245,7 @@ private:
     bool _clock_led_on;
     bool _clock_source_changed;
     bool _tap_was_tapped;
+    std::array<bool, Deck::Count> _engine_feedback { false, false };
 };
 
 };
