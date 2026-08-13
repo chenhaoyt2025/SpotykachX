@@ -42,10 +42,12 @@ public:
   Modulator& mod(const Deck::Ref ref) { return _mod[ref]; }
   DeckEngineConfig engine(const Deck::Ref deck) const { return _engines[deck]; }
   EngineType engine_type(const Deck::Ref deck) const { return _engines[deck].type; }
-  void set_engine_type(const Deck::Ref deck, const EngineType type) { _engines[deck].type = type; }
-  void set_fx_only(const Deck::Ref deck, const bool enabled) { _engines[deck].fx_only = enabled; }
-  void set_through(const Deck::Ref deck, const bool enabled) { _engines[deck].through = enabled; }
-  void set_engine_controls(const Deck::Ref deck, const EngineControls& controls) { _engine_controls[deck] = controls; }
+  void set_engine_type(const Deck::Ref deck, const EngineType type) {
+    if (deck == Deck::A) _engines[deck].type = type;
+  }
+  void set_engine_controls(const Deck::Ref deck, const EngineControls& controls) {
+    if (deck == Deck::A) _engine_controls[deck] = controls;
+  }
 
   Deck::Source source(const Deck::Ref deck) const { return _source[deck]; }
   void set_source(const Deck::Source source, const Deck::Ref deck) { _source[deck] = source; }

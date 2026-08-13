@@ -140,12 +140,9 @@ void AppImpl::Init()
     _settings.init(_hw);
     _settings.read();
     auto& engine_data = _settings.engine_data();
-    _core.set_engine_type(Deck::A, static_cast<EngineType>(engine_data.type[0]));
-    _core.set_engine_type(Deck::B, static_cast<EngineType>(engine_data.type[1]));
-    _core.set_fx_only(Deck::A, engine_data.fx_only[0]);
-    _core.set_fx_only(Deck::B, engine_data.fx_only[1]);
-    _core.set_through(Deck::A, engine_data.through[0]);
-    _core.set_through(Deck::B, engine_data.through[1]);
+    auto engine_type = static_cast<EngineType>(engine_data.type);
+    if (engine_type >= EngineType::Count) engine_type = EngineType::Tape;
+    _core.set_engine_type(Deck::A, engine_type);
 
     _ui.calibrate(false);
 

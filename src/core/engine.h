@@ -20,10 +20,15 @@ enum class EngineType : uint8_t {
     Count
 };
 
+constexpr bool engine_is_effect(const EngineType type)
+{
+    return type == EngineType::Reverb
+           || type == EngineType::Microcosm
+           || type == EngineType::Rings;
+}
+
 struct DeckEngineConfig {
     EngineType type { EngineType::Tape };
-    bool fx_only { false };
-    bool through { false };
 };
 
 struct EngineControls {

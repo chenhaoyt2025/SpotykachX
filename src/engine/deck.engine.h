@@ -24,7 +24,7 @@ class DeckEngine {
     void init(float sample_rate);
     void set_controls(const EngineControls& controls) { controls_ = controls; }
     void prepare(EngineType type);
-    void process(EngineType type, bool fx_only, float in0, float in1, float& out0, float& out1);
+    void process(EngineType type, float in0, float in1, float& out0, float& out1);
 
   private:
     void prepare_audrey();

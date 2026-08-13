@@ -8,7 +8,7 @@ using namespace daisysp;
 
 static constexpr uint32_t kWhite    = 0xffffff;
 static constexpr uint32_t kPink     = 0xff00ff;
-static constexpr uint32_t kYellow    = 0xffde21;
+static constexpr uint32_t kYellow   = 0xffde21;
 static constexpr uint32_t kRed      = 0xff0000;
 static constexpr uint32_t kBlue     = 0x0000ff;
 static constexpr uint32_t kGreen    = 0x00ff00;
@@ -23,18 +23,47 @@ static constexpr uint32_t kPlaitsColor   = 0x00B4D8;
 static constexpr uint32_t kRingsColor    = 0xFFFFFF;
 static constexpr uint32_t kElementsColor = 0xC850FF;
 static constexpr uint32_t kBenjolinColor = 0xB6FF00;
-static constexpr uint32_t kMicrocosmColor = kPink;
-static constexpr std::array<uint32_t, static_cast<size_t>(EngineType::Count)> kEngineColor = {
-    kReelColor,
-    kGreen,
-    kYellow,
-    kBlue,
-    kMicrocosmColor,
-    kPlaitsColor,
-    kRingsColor,
-    kElementsColor,
-    kBenjolinColor
-};
+
+static uint32_t engine_color(const EngineType type)
+{
+    switch(type) {
+        case EngineType::AudreyII:   return kGreen;
+        case EngineType::Oscillator: return kYellow;
+        case EngineType::Reverb:     return kBlue;
+        case EngineType::Microcosm:  return kPink;
+        case EngineType::Plaits:     return kPlaitsColor;
+        case EngineType::Rings:      return kRingsColor;
+        case EngineType::Elements:   return kElementsColor;
+        case EngineType::Benjolin:   return kBenjolinColor;
+        case EngineType::Tape:
+        default:                     return kReelColor;
+    }
+}
+
+static uint32_t launch_gradient_color(const float norm)
+{
+    const auto phase = norm - floorf(norm);
+    const auto sector = phase * 6.0f;
+    const auto index = static_cast<uint8_t>(sector);
+    const auto fraction = sector - static_cast<float>(index);
+    const auto rise = static_cast<uint8_t>(fraction * 255.0f);
+    const auto fall = static_cast<uint8_t>((1.0f - fraction) * 255.0f);
+
+    uint8_t r = 0;
+    uint8_t g = 0;
+    uint8_t b = 0;
+    switch(index) {
+        case 0: r = 255; g = rise; break;
+        case 1: r = fall; g = 255; break;
+        case 2: g = 255; b = rise; break;
+        case 3: g = fall; b = 255; break;
+        case 4: r = rise; b = 255; break;
+        default: r = 255; b = fall; break;
+    }
+    return (static_cast<uint32_t>(r) << 16)
+           | (static_cast<uint32_t>(g) << 8)
+           | static_cast<uint32_t>(b);
+}
 
 static constexpr std::array<uint32_t, kStorageTapeCount> kTapeColor = {
     // Lexicographically ordered colors, 
@@ -196,13 +225,10 @@ void CoreUI::_draw_launching()
         if (t > totalFadeInTime) progress = 1.0f - (t - totalFadeInTime) / 1.5f;
         
         float brightness = std::fmax(0.f, std::fmin(1.f, progress));
-        uint32_t color = kWhite;
-        if (leds[i] == Hardware::LED_FLUX_A || leds[i] == Hardware::LED_GRIT_A) {
-            if (Config::dynamic().is_loaded()) color = kGreen;
-        }
-
-        _hw.leds.Set(leds[i], kWhite, brightness);
-        _hw.leds.Set(leds[i + 1], color, brightness);
+        const auto color_a = launch_gradient_color((static_cast<float>(i) / num) + t * .12f);
+        const auto color_b = launch_gradient_color((static_cast<float>(i + 1) / num) + t * .12f);
+        _hw.leds.Set(leds[i], color_a, brightness);
+        _hw.leds.Set(leds[i + 1], color_b, brightness);
     };
 
     if (t < totalFadeInTime) return;
@@ -211,8 +237,11 @@ void CoreUI::_draw_launching()
     auto brightness = .7f * LUT_Sin_Value_At(phase * kLUTSinSize);
     for (auto ref: { Deck::A, Deck::B }) {
         _ring[ref].set_brightness(brightness);
-        _ring[ref].set_hex_color(mode_color(_core.deck(ref).mode()));
-        _ring[ref].set_segment(0.f, 0.999f);
+        const auto ref_offset = ref == Deck::A ? 0.0f : 0.5f;
+        for (uint8_t i = 0; i < 32; ++i) {
+            _ring[ref].set_point_hex_color(launch_gradient_color(ref_offset + (static_cast<float>(i) / 32.0f) + t * .12f));
+            _ring[ref].set_point(i, brightness);
+        }
         _ring[ref].set_updated();
         _ring[ref].apply(_hw, ref == Deck::A ? Hardware::LED_RING_A : Hardware::LED_RING_B);
     }
@@ -250,6 +279,11 @@ void CoreUI::_draw_play(const Deck::Ref ref, const bool blink)
         else if (storage.can_load()) {
             _led[playId].on(kTapeColor[storage.selected_tape_idx()]);
         }
+        return;
+    }
+    if (ref == Deck::A && _core.engine_type(Deck::A) != EngineType::Tape) {
+        const auto led_id = _core.source(Deck::A) == Deck::Source::internal ? revId : playId;
+        _led[led_id].on(engine_color(_core.engine_type(Deck::A)), .8f);
         return;
     }
     if (deck.is_playing() || (deck.is_play_queued() && _clock_led_on)) { 
@@ -341,6 +375,10 @@ void CoreUI::_draw_ring(const Deck::Ref ref)
         ring.set_hex_color(color);
         ring.set_segment(0.f, _storage.of(ref).progress());
         ring.set_updated();
+        return;
+    }
+    else if (ref == Deck::A && _core.engine_type(Deck::A) != EngineType::Tape) {
+        _draw_engine_ring();
         return;
     }
     // else if (_error_blink_count[ref] > 0) {
@@ -446,12 +484,6 @@ void CoreUI::_draw_ring(const Deck::Ref ref)
         }
     }
 
-    if (_engine_feedback[ref] && !_value_display_timeout.is_passed()) {
-        _show_engine_state(ref);
-        ring.set_updated();
-        return;
-    }
-    
     switch (ref) {
         case Deck::A: {
             _show_value(_mod_amp[Deck::A], ring);
@@ -476,6 +508,51 @@ void CoreUI::_draw_ring(const Deck::Ref ref)
     _show_value(_env_size[ref], ring);
     _show_pitch(ref);
     
+    ring.set_updated();
+}
+void CoreUI::_draw_engine_ring()
+{
+    auto& ring = _ring[Deck::A];
+    auto type = _core.engine_type(Deck::A);
+    auto color = engine_color(type);
+
+    ring.clear();
+    ring.set_hex_color(color);
+    ring.set_brightness(.65f);
+
+    const auto primary = _speed[Deck::A].current();
+    ring.set_segment(0.f, std::clamp(primary, 0.f, .999f));
+
+    if (_touched.test(GritA)) {
+        auto& fx = _core.deck(Deck::A).fx();
+        auto fx_color = grit_color(fx.grit_mode());
+        _show_value(_grit_intens[Deck::A], ring, fx_color, ValueDisplay::Always);
+        _show_value(_grit_mix[Deck::A], ring, fx_color);
+        ring.set_updated();
+        return;
+    }
+    if (_touched.test(FluxA)) {
+        _show_value(_flux_intens[Deck::A], ring, kDelayColor, ValueDisplay::Always);
+        _show_value(_flux_mix[Deck::A], ring, kDelayColor);
+        _show_value(_flux_fb[Deck::A], ring, kDelayColor);
+        ring.set_updated();
+        return;
+    }
+
+    // Keep the engine identity visible while another parameter is adjusted.
+    _show_value(_mod_amp[Deck::A], ring, color);
+    _show_value(_mod_speed[Deck::A], ring, color);
+    _show_value(_click_mix, ring, color);
+    _show_value(_tempo, ring, color);
+    _show_value(_mix[Deck::A], ring, color);
+    _show_value(_feedback[Deck::A], ring, color);
+    _show_value(_win[Deck::A], ring, color);
+    _show_value(_env[Deck::A], ring, color);
+    _show_value(_env_size[Deck::A], ring, color);
+    _show_value(_size[Deck::A], ring, color);
+    _show_value(_pos[Deck::A], ring, color);
+    _show_value(_speed[Deck::A], ring, color);
+
     ring.set_updated();
 }
 void CoreUI::_show_value(MValue& val, LEDRing& ring, const uint32_t def_color, const ValueDisplay display)
@@ -590,39 +667,6 @@ void CoreUI::_show_error(const Deck::Ref ref)
         _ring[ref].set_segment(0.f, 0.98f);
     }
 }
-void CoreUI::_show_engine_state(const Deck::Ref ref)
-{
-    auto& ring = _ring[ref];
-    auto cfg = _core.engine(ref);
-    auto engine_idx = static_cast<uint8_t>(cfg.type);
-    auto point_count = engine_idx + 1;
-
-    ring.clear();
-    ring.set_hex_color(kEngineColor[engine_idx]);
-    ring.set_brightness(.65f);
-    ring.set_segment(0.f, 0.999f);
-    ring.fill_brightness(0.1f);
-
-    auto idx = 3;
-    for(uint8_t i = 0; i < point_count; i++)
-    {
-        ring.set_point_hex_color(kEngineColor[engine_idx]);
-        ring.set_point(idx, 0.85f);
-        idx += 6;
-    }
-
-    if(cfg.fx_only)
-    {
-        ring.set_point_hex_color(kRed);
-        ring.set_point(31, 1.f);
-    }
-    if(cfg.through)
-    {
-        ring.set_point_hex_color(kBlue);
-        ring.set_point(30, 1.f);
-    }
-}
-
 void CoreUI::_breathe_led()
 {
     _led_breathe_phase += .0005f; 

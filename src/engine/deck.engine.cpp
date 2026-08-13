@@ -103,33 +103,30 @@ void DeckEngine::prepare(EngineType type)
     }
 }
 
-void DeckEngine::process(EngineType type, bool fx_only, float in0, float in1, float& out0, float& out1)
+void DeckEngine::process(EngineType type, float in0, float in1, float& out0, float& out1)
 {
     prepare(type);
 
-    if(fx_only)
-    {
-        out0 = in0;
-        out1 = in1;
-        return;
-    }
+    float engine_out0 = in0;
+    float engine_out1 = in1;
 
     switch(type)
     {
-        case EngineType::AudreyII: process_audrey(in0, in1, out0, out1); break;
-        case EngineType::Oscillator: process_oscillator(in0, in1, out0, out1); break;
-        case EngineType::Reverb: process_reverb(in0, in1, out0, out1); break;
-        case EngineType::Microcosm: process_microcosm(in0, in1, out0, out1); break;
-        case EngineType::Plaits: process_plaits(in0, in1, out0, out1); break;
-        case EngineType::Rings: process_rings(in0, in1, out0, out1); break;
-        case EngineType::Elements: process_elements(in0, in1, out0, out1); break;
-        case EngineType::Benjolin: process_benjolin(in0, in1, out0, out1); break;
+        case EngineType::AudreyII: process_audrey(in0, in1, engine_out0, engine_out1); break;
+        case EngineType::Oscillator: process_oscillator(in0, in1, engine_out0, engine_out1); break;
+        case EngineType::Reverb: process_reverb(in0, in1, engine_out0, engine_out1); break;
+        case EngineType::Microcosm: process_microcosm(in0, in1, engine_out0, engine_out1); break;
+        case EngineType::Plaits: process_plaits(in0, in1, engine_out0, engine_out1); break;
+        case EngineType::Rings: process_rings(in0, in1, engine_out0, engine_out1); break;
+        case EngineType::Elements: process_elements(in0, in1, engine_out0, engine_out1); break;
+        case EngineType::Benjolin: process_benjolin(in0, in1, engine_out0, engine_out1); break;
         case EngineType::Tape:
         default:
-            out0 = in0;
-            out1 = in1;
             break;
     }
+
+    out0 = engine_out0;
+    out1 = engine_out1;
 }
 
 void DeckEngine::prepare_audrey()
@@ -170,7 +167,7 @@ void DeckEngine::prepare_microcosm()
     micro_grain_period_ = fmap(controls_.mod_freq, 80.0f, 2200.0f, Mapping::EXP);
     micro_grain_len_ = fmap(controls_.size, 16.0f, 12000.0f, Mapping::EXP);
     micro_center_ = fmap(controls_.pos, 32.0f, static_cast<float>(kMicrocosmDelaySamples - 2), Mapping::EXP);
-    micro_speed_ = powf(2.0f, centered(controls_.pitch) * 2.0f);
+    micro_speed_ = powf(2.0f, centered(controls_.mod_amt) * 2.0f);
     micro_drive_amt_ = fmap(controls_.env, 0.0f, 1.0f);
     micro_reducer_amt_ = clamp01(controls_.grit_intensity);
     micro_spread_ = fmap(controls_.flux_mix, 0.0f, 0.45f);
@@ -190,7 +187,7 @@ void DeckEngine::prepare_plaits()
 
 void DeckEngine::prepare_rings()
 {
-    rings_.SetFreq(norm_to_freq(controls_.pitch, 40.0f, 1500.0f));
+    rings_.SetFreq(norm_to_freq(controls_.mod_freq, 40.0f, 1500.0f));
     rings_.SetStructure(clamp01(controls_.size));
     rings_.SetBrightness(clamp01(controls_.env));
     rings_.SetDamping(clamp01(controls_.feedback));
@@ -274,7 +271,7 @@ void DeckEngine::process_microcosm(float in0, float in1, float& out0, float& out
 
     auto phase = micro_grain_pos_ / grain_len;
     auto win = hann(phase);
-    auto pitch = micro_speed_ * (1.0f + centered(controls_.mod_amt) * 0.45f);
+    auto pitch = micro_speed_;
     auto left_delay = micro_center_ + (micro_grain_pos_ * pitch);
     auto right_delay = std::clamp(left_delay + (micro_spread_ * grain_len), 2.0f, static_cast<float>(kMicrocosmDelaySamples - 2));
     auto left = micro_delay_.ReadHermite(std::clamp(left_delay, 1.0f, static_cast<float>(kMicrocosmDelaySamples - 2))) * win;
@@ -368,6 +365,6 @@ void DeckEngine::process_benjolin(float in0, float in1, float& out0, float& out1
     wet0 += rungler_cv * fmap(controls_.grit_intensity, 0.0f, 0.35f);
     wet1 -= rungler_cv * fmap(controls_.grit_intensity, 0.0f, 0.25f);
 
-    out0 = (wet0 * fmap(controls_.sos, 0.15f, 1.0f));
-    out1 = (wet1 * fmap(controls_.sos, 0.15f, 1.0f));
+    out0 = wet0 * fmap(controls_.sos, 0.15f, 1.0f);
+    out1 = wet1 * fmap(controls_.sos, 0.15f, 1.0f);
 }

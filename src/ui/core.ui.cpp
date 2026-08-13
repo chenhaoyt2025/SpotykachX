@@ -97,6 +97,8 @@ void CoreUI::_init_values()
     _click_mix.set(0.f);
     _key_interval.set(.0588f); //Corresponds to 1/4th
     _tempo.set(Tempo::abs_to_norm(120.f));
+
+    _save_tape_controls();
 }
 
 void CoreUI::process() 
@@ -167,7 +169,9 @@ void CoreUI::process()
 
         EngineControls engine_controls;
         engine_controls.sos = _mix[ref].current();
-        engine_controls.mix = _mix[ref].current();
+        engine_controls.mix = engine_is_effect(_core.engine_type(ref))
+                                  ? _speed[ref].current()
+                                  : _mix[ref].current();
         engine_controls.mod_freq = _mod_speed[ref].current();
         engine_controls.mod_amt = _mod_amp[ref].current();
         engine_controls.size = _size[ref].current();
@@ -181,7 +185,7 @@ void CoreUI::process()
         engine_controls.feedback = _feedback[ref].current();
         engine_controls.mode = deck.mode();
         engine_controls.reverse = deck.is_reverse();
-        _core.set_engine_controls(ref, engine_controls);
+        if (ref == Deck::A) _core.set_engine_controls(ref, engine_controls);
     }
     if (_tempo.apply()) _core.driver().set_tempo_norm(_tempo.value());
     if (_pan_speed.apply()) _core.panner().set_speed(_pan_speed.value());
@@ -656,53 +660,71 @@ void CoreUI::_toggle_record(const Deck::Ref ref, const bool internal)
 {
     if (!_storage.of(ref).is_idle()) return;
 
+    if (ref == Deck::A && _core.engine_type(Deck::A) != EngineType::Tape) {
+        _core.set_source(internal ? Deck::Source::internal : Deck::Source::external, Deck::A);
+        return;
+    }
+
     auto& deck = _core.deck(ref);
     auto src = internal ? Deck::Source::internal : Deck::Source::external;
     _core.set_source(src, ref);
     deck.toggle_recording();
     _storage.of(ref).reset_recent_slot();
 }
-void CoreUI::_cycle_engine(const Deck::Ref ref)
+void CoreUI::_cycle_engine()
 {
-    auto next = static_cast<uint8_t>(_core.engine_type(ref));
+    const auto current = _core.engine_type(Deck::A);
+    auto next = static_cast<uint8_t>(current);
     next = (next + 1) % static_cast<uint8_t>(EngineType::Count);
+    const auto next_type = static_cast<EngineType>(next);
 
-    _core.set_engine_type(ref, static_cast<EngineType>(next));
+    if (current == EngineType::Tape && next_type != EngineType::Tape) {
+        _save_tape_controls();
+    }
+    else if (current != EngineType::Tape && next_type == EngineType::Tape) {
+        _restore_tape_controls();
+    }
+
+    _core.set_engine_type(Deck::A, next_type);
 
     auto& data = _settings.engine_data();
-    data.type[ref] = next;
+    data.type = next;
     _settings.write_engine();
-
-    _engine_feedback[ref] = true;
-    _value_display_timeout.start();
 }
-void CoreUI::_toggle_engine_fx_only(const Deck::Ref ref)
+void CoreUI::_save_tape_controls()
 {
-    auto cfg = _core.engine(ref);
-    cfg.fx_only = !cfg.fx_only;
-
-    _core.set_fx_only(ref, cfg.fx_only);
-
-    auto& data = _settings.engine_data();
-    data.fx_only[ref] = cfg.fx_only;
-    _settings.write_engine();
-
-    _engine_feedback[ref] = true;
-    _value_display_timeout.start();
+    _tape_controls_a = {
+        _speed[Deck::A].current(),
+        _mix[Deck::A].current(),
+        _feedback[Deck::A].current(),
+        _pos[Deck::A].current(),
+        _pos_offset[Deck::A].current(),
+        _size[Deck::A].current(),
+        _env[Deck::A].current(),
+        _env_size[Deck::A].current(),
+        _win[Deck::A].current(),
+        _size_quarters[Deck::A].current(),
+        _mod_speed[Deck::A].current(),
+        _mod_amp[Deck::A].current(),
+    };
 }
-void CoreUI::_toggle_engine_through(const Deck::Ref ref)
+void CoreUI::_restore_tape_controls()
 {
-    auto cfg = _core.engine(ref);
-    cfg.through = !cfg.through;
-
-    _core.set_through(ref, cfg.through);
-
-    auto& data = _settings.engine_data();
-    data.through[ref] = cfg.through;
-    _settings.write_engine();
-
-    _engine_feedback[ref] = true;
-    _value_display_timeout.start();
+    _speed[Deck::A].set(_tape_controls_a.speed);
+    _pitch_knob_val[Deck::A] = _tape_controls_a.speed;
+    _mix[Deck::A].set(_tape_controls_a.mix);
+    _feedback[Deck::A].set(_tape_controls_a.feedback);
+    _pos[Deck::A].set(_tape_controls_a.pos);
+    _pos_offset[Deck::A].set(_tape_controls_a.pos_offset);
+    _size[Deck::A].set(_tape_controls_a.size);
+    _env[Deck::A].set(_tape_controls_a.env);
+    _env_size[Deck::A].set(_tape_controls_a.env_size);
+    _win[Deck::A].set(_tape_controls_a.win);
+    _size_quarters[Deck::A].set(_tape_controls_a.size_quarters);
+    _mod_speed[Deck::A].set(_tape_controls_a.mod_speed);
+    _mod_amp[Deck::A].set(_tape_controls_a.mod_amp);
+    _pitch_quantized.reset(Deck::A);
+    _reset_changing_value_id();
 }
 void CoreUI::_trigger(const Deck::Ref ref, const float speed, const bool discont) 
 {

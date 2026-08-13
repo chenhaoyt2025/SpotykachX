@@ -59,7 +59,7 @@ void CoreUI::_on_pad_touch(Hardware::Pad pad)
 
         case P::SeqA: {
             if (_touched.test(SpotPad)) {
-                _cycle_engine(Deck::A);
+                _cycle_engine();
                 return;
             }
             if (_storage.of(Deck::A).is_selecting()) {
@@ -83,11 +83,6 @@ void CoreUI::_on_pad_touch(Hardware::Pad pad)
             break;
         }
         case P::SeqB: {
-            if (_touched.test(SpotPad)) {
-                if (is_alt_touched) _toggle_engine_through(Deck::B);
-                else _cycle_engine(Deck::B);
-                return;
-            }
             if (_storage.of(Deck::B).is_selecting()) {
                 if (is_alt_touched) _storage.of(Deck::B).previous_tape();
                 else _storage.of(Deck::B).next_tape();
@@ -172,11 +167,6 @@ void CoreUI::_on_pad_release(Hardware::Pad pad)
 void CoreUI::_on_play_touch(const Deck::Ref ref, const bool reverse)
 {
     auto& deck = _core.deck(ref);
-
-    if (reverse && _touched.test(Alt) && _touched.test(SpotPad)) {
-        _toggle_engine_fx_only(ref);
-        return;
-    }
 
     if (_tap_hold.passed()) {
         if (deck.is_generating()) deck.stop();
