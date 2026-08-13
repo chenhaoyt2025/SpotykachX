@@ -10,19 +10,19 @@ Current SpotykachX release: `v0.2`
 
 ## English
 
-Still very much a work in progress. Deck A can switch between different sound and effects engines.
+Still very much a work in progress.Deck A can switch between different sound and effects engines.
 
-[Demo video and playlist](https://www.youtube.com/watch?v=51p9QNl07N8&list=PLdVutg6ng3kQ)
+[https://www.youtube.com/watch?v=51p9QNl07N8&list=PLdVutg6ng3kQ](https://www.youtube.com/watch?v=51p9QNl07N8&list=PLdVutg6ng3kQ)
 
-- [00:00](https://www.youtube.com/watch?v=51p9QNl07N8) Start
-- [00:20](https://www.youtube.com/watch?v=51p9QNl07N8&t=20s) Record Ready & AudreyII | Green
-- [02:00](https://www.youtube.com/watch?v=51p9QNl07N8&t=120s) Oscillator | Yellow
-- [02:30](https://www.youtube.com/watch?v=51p9QNl07N8&t=150s) (not yet) Valhalla Reverb (kind of) | Blue
+- 00:00 Start
+- 00:20 AudreyII | Green
+- 02:00 Oscillator | Yellow
+- 02:30 (not yet) Valhalla Reverb (kind of) | Blue
 - (not yet) Microcosm Mosaic | Pink
 - (not yet) Plaits | Cyan
 - (not yet) Rings | White
 - (not yet) Elements | Purple
-- [03:03](https://www.youtube.com/watch?v=51p9QNl07N8&t=183s) Benjolin | Yellow-green
+- 03:03 Benjolin | Yellow-green
 
 SpotykachX keeps the original two-deck Tape workflow and adds switchable sound/effect engines to Deck A. Deck B always remains the original Tape deck.
 
@@ -81,17 +81,17 @@ make program-dfu
 
 项目仍在持续开发中。Deck A 可以切换不同的声音与效果引擎。
 
-[演示视频与播放列表](https://www.youtube.com/watch?v=51p9QNl07N8&list=PLdVutg6ng3kQ)
+[https://www.youtube.com/watch?v=51p9QNl07N8&list=PLdVutg6ng3kQ](https://www.youtube.com/watch?v=51p9QNl07N8&list=PLdVutg6ng3kQ)
 
-- [00:00](https://www.youtube.com/watch?v=51p9QNl07N8) 开始
-- [00:20](https://www.youtube.com/watch?v=51p9QNl07N8&t=20s) Record Ready 与 AudreyII | 绿色
-- [02:00](https://www.youtube.com/watch?v=51p9QNl07N8&t=120s) Oscillator | 黄色
-- [02:30](https://www.youtube.com/watch?v=51p9QNl07N8&t=150s)（尚未演示）Valhalla Reverb（近似实现）| 蓝色
+- 00:00 开始
+- 00:20 AudreyII | 绿色
+- 02:00 Oscillator | 黄色
+- 02:30（尚未演示）Valhalla Reverb（近似实现）| 蓝色
 - （尚未演示）Microcosm Mosaic | 粉色
 - （尚未演示）Plaits | 青色
 - （尚未演示）Rings | 白色
 - （尚未演示）Elements | 紫色
-- [03:03](https://www.youtube.com/watch?v=51p9QNl07N8&t=183s) Benjolin | 黄绿色
+- 03:03 Benjolin | 黄绿色
 
 SpotykachX 保留原版双 Deck Tape 工作流，只给 Deck A 增加可切换的声音与效果引擎。Deck B 始终保持原版 Tape。
 
